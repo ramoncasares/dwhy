@@ -21,8 +21,9 @@ else
       echo "$1 -> $FIRSTTARGET -> $TARGET"
    else
       if test "[$TARGET]" = "[]" ; then
-         echo "$1 not found"
-         return 2
+         PACKAGES=$1
+         # echo "$1 not found"
+         # return 2
       else
          echo "$1 -> $TARGET"
       fi
@@ -30,8 +31,11 @@ else
 fi
 
 # echo "$TARGET"
-file "$TARGET"
-
+if test "[$TARGET]" = "[]" ; then
+   echo "$1: file not found, try as package"
+else
+   file "$TARGET"
+fi
 # dpkgst package -> A = automatic, M = manual, X = no installed
 dpkgst () {
    SEARCH="$(aptitude search "^$1$")"
@@ -71,55 +75,71 @@ dtasks () {
 drdp () {
    for RPKG in $(apt-get -qq -s remove "$1" | grep "^Remv" | cut -d' ' -f2)
    do
-      if test "$1" != "$RPKG" ; then
-         echo -n "$1"
+      if test "$1" = "$RPKG" ; then
+         echo ""
+      else
+         # echo -n " $1"
          dpkgst $RPKG
          if test "$DSTATUS" = "M" ; then
             echo -n " <- $RPKG (M)"
-            dtask $RPKG
+            TASKS=""
+            dtasks "$PACKAGE"
+            if test "[$TASKS]" != "[]" ; then
+               echo -n " <-"
+               for P in $TASKS ; do
+                  echo -n " Task $P"
+               done
+            fi
+            echo ""
          else
-            echo -n " <- $RPKG ($DSTATUS)"
+            echo " <- $RPKG ($DSTATUS)"
+            echo -n " $RPKG ($DSTATUS)"
+            drdp $RPKG
          fi
-         echo ""
       fi
    done
 }
 
-PACKAGE=$(dpkg-query --search "$TARGET" | cut -d: -f1)
+if test "[$PACKAGES]" = "[]" ; then
+   PACKAGES=$(dpkg-query --search "$TARGET" | cut -d: -f1 | sed s/,//g)
+fi
+# echo $PACKAGES
 
-if test "[$PACKAGE]" = "[]" ; then
+if test "[$PACKAGES]" = "[]" ; then
    echo "$TARGET is not in a Debian package"
 else
+ for PACKAGE in $PACKAGES ; do
    DFILE=$(apt-cache show "$PACKAGE" | grep "^Filename: " | cut -d' ' -f2)
-   # ORIGIN=$(dpkg-query -W -f='${Origin}' $PACKAGE)
-   echo "Package: $DFILE"
-
    PRIORITY=$(dpkg-query -W -f='${Priority}' $PACKAGE)
-   # PRIORITY=$(dpkg-query -p "$PACKAGE" | grep "^Priority: " | cut -d' ' -f2)
+   # ORIGIN=$(dpkg-query -W -f='${Origin}' $PACKAGE)
+   echo "Package: $DFILE [$PRIORITY]"
    if test "$PRIORITY" = required -o "$PRIORITY" = important ; then
-      echo "$PACKAGE ($PRIORITY) <- base system"
+      echo " $PACKAGE <- base system"
    else
       if test "$PRIORITY" = standard ; then
-         echo "$PACKAGE ($PRIORITY) <- standard system"
+         echo " $PACKAGE <- standard system"
       else
          dpkgst $PACKAGE
          # echo $DSTATUS
          if test "$DSTATUS" = "A" ; then
-            echo "$PACKAGE ($PRIORITY): Installed automatically"
+            echo -n " $PACKAGE (A)"
             drdp "$PACKAGE"
          else
-            echo "$PACKAGE ($PRIORITY): Installed manually"
+            echo -n " $PACKAGE (M)"
             # dtask $PACKAGE
             TASKS=""
             dtasks "$PACKAGE"
-            echo -n "Task:"
-            for P in $TASKS ; do
-               echo -n " $P"
-            done
+            if test "[$TASKS]" != "[]" ; then
+               echo -n " <-"
+               for P in $TASKS ; do
+                  echo -n " Task $P"
+               done
+            fi
             echo ""
          fi
       fi
    fi
+ done
 fi
 
 exit 0

@@ -26,7 +26,7 @@ for PACKAGE in $@ ; do
    PRIORITY=$(dpkg-query -W -f='${Priority}' $PACKAGE)
    SEARCH="$(aptitude search "^$PACKAGE$")"
    if test "[$(echo "$SEARCH" | cut -c1)]" = "[i]"
-   then 
+   then
       if test "[$(echo "$SEARCH" | cut -c3)]" = "[A]" ; then
          STATUS="A"
       else
@@ -41,11 +41,11 @@ for PACKAGE in $@ ; do
    else
       if test "$PRIORITY" = standard ; then
          echo " <- standard system (D)"
-      else   
+      else
          if test "$STATUS" = "M" ; then
             dtasks "$PACKAGE"
             if test "[$TASKS]" != "[]" ; then
-               echo -n " <-"         
+               echo -n " <-"
                echo "$TASKS (T)"
             else
                echo ""
@@ -66,7 +66,7 @@ for PACKAGE in $@ ; do
                dtree $(echo $RPKGS | tr "\n" " ")
             fi
          fi
-      fi   
+      fi
    fi
 done
 

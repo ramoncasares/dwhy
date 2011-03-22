@@ -22,88 +22,21 @@ else
    else
       if test "[$TARGET]" = "[]" ; then
          PACKAGES=$1
-         # echo "$1 not found"
-         # return 2
       else
          echo "$1 -> $TARGET"
       fi
    fi
 fi
 
-# echo "$TARGET"
 if test "[$TARGET]" = "[]" ; then
    echo "$1: file not found, try as package"
 else
    file "$TARGET"
 fi
-# dpkgst package -> A = automatic, M = manual, X = no installed
-dpkgst () {
-   SEARCH="$(aptitude search "^$1$")"
-   # echo "$SEARCH"
-   if test "[$(echo "$SEARCH" | cut -c1)]" = "[i]"
-   then 
-      if test "[$(echo "$SEARCH" | cut -c3)]" = "[A]" ; then
-         DSTATUS="A"
-      else
-         DSTATUS="M"
-      fi
-   else
-       DSTATUS="X"
-   fi
-}
-
-# dtask package 
-dtask () {
-   for TASK in $(tasksel --list-tasks | grep "^i" | sed 's/^i \([^\t]*\).*/\1/')
-   do
-      if test "$(aptitude search "$1~t$TASK")" != "" ; then
-         echo -n " <- Task $TASK"
-      fi
-   done
-}
-
-dtasks () {
-   for TASK in $(tasksel --list-tasks | grep "^i" | sed 's/^i \([^\t]*\).*/\1/')
-   do
-      if test "$(aptitude search "$1~t$TASK")" != "" ; then
-         TASKS="$TASKS $TASK"
-      fi
-   done
-}
-
-# drdp package
-drdp () {
-   for RPKG in $(apt-get -qq -s remove "$1" | grep "^Remv" | cut -d' ' -f2)
-   do
-      if test "$1" = "$RPKG" ; then
-         echo ""
-      else
-         # echo -n " $1"
-         dpkgst $RPKG
-         if test "$DSTATUS" = "M" ; then
-            echo -n " <- $RPKG (M)"
-            TASKS=""
-            dtasks "$PACKAGE"
-            if test "[$TASKS]" != "[]" ; then
-               echo -n " <-"
-               for P in $TASKS ; do
-                  echo -n " Task $P"
-               done
-            fi
-            echo ""
-         else
-            echo " <- $RPKG ($DSTATUS)"
-            echo -n " $RPKG ($DSTATUS)"
-            drdp $RPKG
-         fi
-      fi
-   done
-}
 
 if test "[$PACKAGES]" = "[]" ; then
    PACKAGES=$(dpkg-query --search "$TARGET" | cut -d: -f1 | sed s/,//g)
 fi
-# echo $PACKAGES
 
 if test "[$PACKAGES]" = "[]" ; then
    echo "$TARGET is not in a Debian package"
@@ -111,48 +44,10 @@ else
  for PACKAGE in $PACKAGES ; do
    DFILE=$(apt-cache show "$PACKAGE" | grep "^Filename: " | cut -d' ' -f2)
    PRIORITY=$(dpkg-query -W -f='${Priority}' $PACKAGE)
-   # ORIGIN=$(dpkg-query -W -f='${Origin}' $PACKAGE)
    echo "Package: $DFILE [$PRIORITY]"
-   if test "$PRIORITY" = required -o "$PRIORITY" = important ; then
-      echo " $PACKAGE <- base system"
-   else
-      if test "$PRIORITY" = standard ; then
-         echo " $PACKAGE <- standard system"
-      else
-         dpkgst $PACKAGE
-         # echo $DSTATUS
-         if test "$DSTATUS" = "A" ; then
-            echo -n " $PACKAGE (A)"
-            drdp "$PACKAGE"
-         else
-            echo -n " $PACKAGE (M)"
-            # dtask $PACKAGE
-            TASKS=""
-            dtasks "$PACKAGE"
-            if test "[$TASKS]" != "[]" ; then
-               echo -n " <-"
-               for P in $TASKS ; do
-                  echo -n " Task $P"
-               done
-            fi
-            echo ""
-         fi
-      fi
-   fi
+   dtree $PACKAGE
  done
 fi
 
 exit 0
-
-
-         if test "$DSTATUS" = "A" ; then
-            # apt-cache showpkg "$PACKAGE"
-            # dpkg-query -p "$PACKAGE" | grep Priority
-            apt-cache --installed rdepends "$PACKAGE"
-            apt-get -s remove "$PACKAGE"
-            # apt-cache depends --recurse "$PACKAGE" 
-            # apt-cache policy "$PACKAGE"
-            # dpkg -l "$PACKAGE"
-
-
 

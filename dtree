@@ -1,0 +1,74 @@
+#!/bin/dash
+
+# dtree by www.ramoncasares.com 2011
+# License: GPL
+
+if test $# = 0 ; then
+   echo "Enter: dtree package1 package2 ..."
+   echo "       to draw the tree of packages and tasks of package1 ..."
+   return 1
+fi
+
+dtasks () {
+   if test "[$ITASKS]" = "[]" ; then
+      ITASKS=$(tasksel --list-tasks | grep "^i" | sed 's/^i \([^\t]*\).*/\1/')
+   fi
+   TASKS=""
+   for TASK in $ITASKS
+   do
+      if test "$(aptitude search "$1~t$TASK")" != "" ; then
+         TASKS="$TASKS $TASK"
+      fi
+   done
+}
+
+for PACKAGE in $@ ; do
+   PRIORITY=$(dpkg-query -W -f='${Priority}' $PACKAGE)
+   SEARCH="$(aptitude search "^$PACKAGE$")"
+   if test "[$(echo "$SEARCH" | cut -c1)]" = "[i]"
+   then 
+      if test "[$(echo "$SEARCH" | cut -c3)]" = "[A]" ; then
+         STATUS="A"
+      else
+         STATUS="M"
+      fi
+   else
+       STATUS="X"
+   fi
+   echo -n " $PACKAGE ($STATUS)"
+   if test "$PRIORITY" = required -o "$PRIORITY" = important ; then
+      echo " <- base system (D)"
+   else
+      if test "$PRIORITY" = standard ; then
+         echo " <- standard system (D)"
+      else   
+         if test "$STATUS" = "M" ; then
+            dtasks "$PACKAGE"
+            if test "[$TASKS]" != "[]" ; then
+               echo -n " <-"         
+               echo "$TASKS (T)"
+            else
+               echo ""
+            fi
+         else
+            RPKGS=$(apt-get -qq -s remove "$PACKAGE" \
+                    | grep "^Remv" | cut -d' ' -f2 \
+                    | grep -vx "$PACKAGE")
+            if test $(echo "$RPKGS" | wc -w) -eq 0 ; then
+               echo ""
+            elif test $(echo "$RPKGS" | wc -w) -eq 1 ; then
+               echo -n " <-"
+               dtree $RPKGS
+            else
+               echo -n " <- "
+               echo "$RPKGS" | tr "\n" " "
+               echo ""
+               dtree $(echo $RPKGS | tr "\n" " ")
+            fi
+         fi
+      fi   
+   fi
+done
+
+exit 0
+

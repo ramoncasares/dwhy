@@ -1,0 +1,159 @@
+% dwhy.tex (RMCG20110323)
+% (c) by www.ramoncasares.com 2011
+% License: cc-by-sa
+\input doc
+\rmcglayout
+
+
+\title0 dwhy
+
+\title1 Syntax
+
+Dash script "dwhy" uses syntax: "dwhy name".
+It tells me why the object named "name" is in my Debian system.
+Object "name" can be a file, or a program, or a package.
+
+\title1 Examples
+
+I will explain "dwhy" showing some examples.
+
+\title2 File
+
+I will learn first why file "/etc/crontab" is in my system.
+\begincode
+$ dwhy /etc/crontab
+/etc/crontab: ASCII English text
+Package: pool/main/c/cron/cron_3.0pl1-116_amd64.deb [important]
+ cron (M) <- base system (D)
+\endcode
+So "dwhy" tells me that "/etc/crontab" is a text file,
+which is part of package "cron", version "3.0pl1-116",
+for the architecture "amd64", and priority "important".
+Finally, it tells me that 
+package "cron" was manually "(M)" installed
+as part of Debian "(D)" base system.
+
+\title2 Program
+
+Now, I will try "dwhy" with a program, for example "file".
+\begincode
+$ dwhy file
+file -> /usr/bin/file
+/usr/bin/file: ELF 64-bit LSB executable, x86-64, [...]
+Package: pool/main/f/file/file_5.04-5_amd64.deb [standard]
+ file (M) <- standard system (D)
+\endcode
+Now, "dwhy" first locates the executable file, "/usr/bin/file",
+and then explains that it is part of package "file", priority "standard",
+installed by Debian "(D)" as part of the standard system.
+
+\title2 Package
+
+If I apply "dwhy" to a package installed in my system,
+for example "samba", the session goes as follows:
+\begincode
+$ dwhy samba
+samba: file not found, try as package
+Package: pool/main/s/samba/samba_3.5.6~[...]_amd64.deb [optional]
+ samba (M)
+\endcode
+It means that I have installed package "samba" myself manually "(M)".
+
+\title2 Directory
+
+If I use a directory as argument, I also get some information.
+\begincode
+$ dwhy /etc/network
+/etc/network: directory
+Package: pool/main/n/netbase/netbase_4.45_all.deb [important]
+ netbase (M) <- base system (D)
+Package: pool/main/w/wpasupplicant/wpasupplicant_[...].deb [optional]
+ wpasupplicant (A) <- network-manager-gnome network-manager 
+ network-manager-gnome (A)
+ network-manager (A) <- network-manager-gnome (A)
+Package: pool/main/i/ifupdown/ifupdown_0.6.10_amd64.deb [important]
+ ifupdown (M) <- base system (D)
+Package: pool/main/v/vde2/vde2_2.2.3-3_amd64.deb [optional]
+ vde2 (A)
+Package: pool/main/s/samba/samba_3.5.6~[...]_amd64.deb [optional]
+ samba (M)
+Package: pool/main/o/openssh/openssh-server_[...]_amd64.deb [optional]
+ openssh-server (M) <- ssh-server (T)
+Package: pool/main/s/sysvinit/initscripts_[...]_amd64.deb [required]
+ initscripts (M) <- base system (D)
+Package: pool/main/a/avahi/avahi-daemon_[...]_amd64.deb [optional]
+ avahi-daemon (M) <- desktop (T)
+\endcode
+The directory is used by several packages,
+so "dwhy" has to explain why each one is installed.
+Here I get all kind of explanations.
+Package "wpasupplicant" was installed automatically "(A)",
+either by pachage "network-manager-gnome" or package "network-manager",
+so "dwhy" investigates each one.
+Package "vde" was installed automatically "(A)",
+though it does not depend on any other pakage;
+this means that it was installed as a recommendation.
+Package "openssh-server" was installed as part
+of the task "(T)" "ssh-server".
+
+\title2 Out of Debian
+
+Of course, Debian is not responsible of every file in my system.
+\begincode
+$ dwhy dwhy 
+/home/user/src/dash/dwhy/dwhy: a /bin/dash script text executable
+dpkg: /home/user/src/dash/dwhy/dwhy not found.
+/home/user/src/dash/dwhy/dwhy is not in a Debian package
+\endcode
+
+And, of course, I have not installed every Debian package.
+\begincode
+$ dwhy kde
+kde: file not found, try as package
+No packages found matching kde.
+Package: pool/main/m/meta-kde/kde_66_all.deb []
+No packages found matching kde.
+ kde (X)
+\endcode
+It means that package "kde" is not "(X)" installed in my system.
+
+Finally, of course, sometimes I fail to ask a proper question.
+\begincode
+$ dwhy foo
+foo: file not found, and it is not a package.
+\endcode
+
+
+\title1 Problems
+
+One of the problems was already presented:
+"dwhy" cannot explain why packages installed as recommendations
+are in the system.
+
+Another problem is that some files installed by Debian,
+as "/etc/fstab", are not part of any package,
+though they are built by a package installation script,
+and "dwhy" does not do a good job with these.
+\begincode
+$ dwhy /etc/fstab
+/etc/fstab: ASCII English text
+dpkg: /etc/fstab not found.
+/etc/fstab is not in a Debian package
+\endcode
+
+Speed can become a problem. I wrote "dwhy" on the basis of
+other programs, "dpkg-query", "apt-cache", "aptitude", etc.,
+instead of going straight to the databases in
+"/var/lib/dpkg", "/var/lib/apt", and "/var/lib/aptitude".
+
+
+\title1 The code
+
+Magicians advise not to reveal the tricks,
+but Debian is not magic.
+
+\file{dwhy}
+
+
+\bye
+
